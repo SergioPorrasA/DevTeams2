@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 class AdminEquipoController extends Controller
 {
-    // Listar todos los equipos
+    //equipos
     public function index()
     {
         $equipos = Equipo::with(['participantes.usuario', 'proyectos.evento'])->get();
@@ -18,7 +18,6 @@ class AdminEquipoController extends Controller
         return view('admin.equipos.index', compact('equipos'));
     }
 
-    // Ver detalles de un equipo
     public function show($id)
     {
         $equipo = Equipo::with(['participantes.usuario', 'proyectos.evento', 'proyectos.asesor'])->findOrFail($id);
@@ -26,18 +25,18 @@ class AdminEquipoController extends Controller
         return view('admin.equipos.show', compact('equipo'));
     }
 
-    // Eliminar equipo
+    //eliminar equipo
     public function destroy($id)
     {
         try {
             $equipo = Equipo::findOrFail($id);
             
-            // Eliminar relaciones en participante_equipo
+            
             DB::table('participante_equipo')
                 ->where('Id_equipo', $id)
                 ->delete();
             
-            // Eliminar equipo
+            
             $equipo->delete();
 
             return redirect()->route('admin.equipos.index')

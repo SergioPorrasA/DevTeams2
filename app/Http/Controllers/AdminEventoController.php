@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 
 class AdminEventoController extends Controller
 {
-    // Mostrar todos los eventos (admin)
     public function index()
     {
         $eventos = Evento::with(['juez', 'proyectos'])->orderBy('Fecha_inicio', 'desc')->get();
@@ -18,7 +17,6 @@ class AdminEventoController extends Controller
         return view('admin.eventos.index', compact('eventos', 'jueces'));
     }
 
-    // Guardar nuevo evento
     public function store(Request $request)
     {
         $request->validate([
@@ -50,7 +48,6 @@ class AdminEventoController extends Controller
         }
     }
 
-    // Mostrar detalle del evento
     public function show($id)
     {
         $evento = Evento::with(['juez', 'proyectos.equipo.participantes.usuario', 'proyectos.asesor'])
@@ -59,7 +56,6 @@ class AdminEventoController extends Controller
         return view('admin.eventos.show', compact('evento'));
     }
 
-    // Editar evento
     public function edit($id)
     {
         $evento = Evento::findOrFail($id);
@@ -68,7 +64,6 @@ class AdminEventoController extends Controller
         return view('admin.eventos.edit', compact('evento', 'jueces'));
     }
 
-    // Actualizar evento
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -98,7 +93,6 @@ class AdminEventoController extends Controller
         }
     }
 
-    // Eliminar evento
     public function destroy($id)
     {
         try {
@@ -114,7 +108,6 @@ class AdminEventoController extends Controller
         }
     }
 
-    // Ver equipos inscritos
     public function equiposInscritos($id)
     {
         $evento = Evento::with(['proyectos.equipo.participantes.usuario', 'proyectos.asesor'])

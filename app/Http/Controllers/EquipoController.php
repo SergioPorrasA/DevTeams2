@@ -12,19 +12,18 @@ use Illuminate\Support\Facades\Log;
 
 class EquipoController extends Controller
 {
-    // Mostrar equipos del participante
     public function index()
     {
         $user = Auth::user();
         
-        // Obtener el participante usando Usuario_id
+        //equipos del usuario
         $participante = Participante::where('Usuario_id', $user->Id)->first();
         
         if (!$participante) {
             return view('dashboard', ['equipos' => collect()]);
         }
         
-        // Obtener equipos del participante mediante la tabla intermedia
+        
         $equipos = Equipo::whereIn('Id', function($query) use ($participante) {
             $query->select('Id_equipo')
                   ->from('participante_equipo')
@@ -39,7 +38,6 @@ class EquipoController extends Controller
         return view('dashboard', compact('equipos'));
     }
 
-    // Guardar nuevo equipo
     public function store(Request $request)
     {
         $request->validate([
@@ -51,7 +49,6 @@ class EquipoController extends Controller
 
             $user = Auth::user();
             
-            // Obtener o crear participante con Usuario_id
             $participante = Participante::firstOrCreate(
                 ['Usuario_id' => $user->Id],
                 [
@@ -63,16 +60,15 @@ class EquipoController extends Controller
                 ]
             );
 
-            // Crear el equipo (sin Id_perfil)
             $equipo = new Equipo();
             $equipo->nombre = $request->nombre;
             $equipo->save();
 
-            // Agregar al participante como miembro del equipo con perfil de Líder (Id_perfil = 1)
+            //el participante sera lider del equipo que cree
             DB::table('participante_equipo')->insert([
                 'Id_participante' => $participante->Id,
                 'Id_equipo' => $equipo->Id,
-                'Id_perfil' => 1  // Perfil de Líder para el creador del equipo
+                'Id_perfil' => 1  
             ]);
 
             DB::commit();
@@ -93,12 +89,10 @@ class EquipoController extends Controller
         }
     }
 
-    // Ver detalles del equipo
     public function show($id)
     {
         $equipo = Equipo::with(['participantes.usuario', 'proyectos'])->findOrFail($id);
         
-        // Verificar que el usuario pertenece al equipo
         $user = Auth::user();
         $participante = Participante::where('Usuario_id', $user->Id)->first();
         
@@ -106,7 +100,6 @@ class EquipoController extends Controller
             return redirect()->route('dashboard')->with('error', 'No tienes acceso a este equipo');
         }
         
-        // Verificar si pertenece al equipo
         $perteneceAlEquipo = DB::table('participante_equipo')
             ->where('Id_participante', $participante->Id)
             ->where('Id_equipo', $id)
@@ -119,7 +112,6 @@ class EquipoController extends Controller
         return view('equipos.show', compact('equipo'));
     }
 
-    // Salir del equipo
     public function leave($id)
     {
         try {
@@ -130,18 +122,17 @@ class EquipoController extends Controller
                 return redirect()->route('dashboard')->with('error', 'No se encontró el participante');
             }
 
-            // Contar miembros del equipo
+            
             $cantidadMiembros = DB::table('participante_equipo')
                 ->where('Id_equipo', $id)
                 ->count();
 
-            // Eliminar la relación
+            
             DB::table('participante_equipo')
                 ->where('Id_participante', $participante->Id)
                 ->where('Id_equipo', $id)
                 ->delete();
 
-            // Si era el único miembro, eliminar el equipo
             if ($cantidadMiembros <= 1) {
                 $equipo = Equipo::find($id);
                 if ($equipo) {
@@ -157,7 +148,7 @@ class EquipoController extends Controller
         }
     }
 
-    // Invitar a un usuario al equipo
+    //invitar al equipo
     public function invite(Request $request, $id)
     {
         $request->validate([
@@ -166,14 +157,12 @@ class EquipoController extends Controller
         ]);
 
         try {
-            // Buscar el usuario por correo
             $usuarioInvitado = \App\Models\Usuario::where('Correo', $request->email)->first();
             
             if (!$usuarioInvitado) {
                 return redirect()->back()->with('error', 'No se encontró un usuario con ese correo');
             }
 
-            // Obtener el participante del usuario invitado
             $participanteInvitado = Participante::firstOrCreate(
                 ['Usuario_id' => $usuarioInvitado->Id],
                 [
@@ -185,7 +174,6 @@ class EquipoController extends Controller
                 ]
             );
 
-            // Verificar que no esté ya en el equipo
             $yaEsMiembro = DB::table('participante_equipo')
                 ->where('Id_participante', $participanteInvitado->Id)
                 ->where('Id_equipo', $id)
@@ -195,7 +183,6 @@ class EquipoController extends Controller
                 return redirect()->back()->with('error', 'Este usuario ya es miembro del equipo');
             }
 
-            // Mapear el rol seleccionado al Id del perfil
             $rolesMap = [
                 'lider' => 1,
                 'disenador' => 4,
@@ -203,9 +190,8 @@ class EquipoController extends Controller
                 'frontend' => 10
             ];
 
-            $perfilId = $rolesMap[$request->rol] ?? 1; // Por defecto Líder
+            $perfilId = $rolesMap[$request->rol] ?? 1; 
 
-            // Agregar al equipo
             DB::table('participante_equipo')->insert([
                 'Id_participante' => $participanteInvitado->Id,
                 'Id_equipo' => $id,

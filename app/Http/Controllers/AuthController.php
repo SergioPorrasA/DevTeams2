@@ -22,7 +22,6 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Buscar usuario por correo
         $usuario = Usuario::where('Correo', $request->email)->first();
 
         if ($usuario && Hash::check($request->password, $usuario->Contraseña) && $usuario->Is_active) {
@@ -31,13 +30,11 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
             
-            // Obtener rol del usuario
             $userRole = DB::table('usuario_rol')
                 ->join('rol', 'usuario_rol.Id_Rol', '=', 'rol.Id')
                 ->where('usuario_rol.Id_usuario', $usuario->Id)
                 ->first();
 
-            // Redirigir según el rol
             if ($userRole) {
                 switch ($userRole->Descripcion) {
                     case 'Administrador':

@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 
 class EventoController extends Controller
 {
-    // Listar eventos
     public function index()
     {
         $eventos = Evento::orderBy('Fecha_inicio', 'desc')->get();
@@ -22,7 +21,7 @@ class EventoController extends Controller
         $user = Auth::user();
         $participante = Participante::where('Usuario_id', $user->Id)->first();
         
-        // Obtener equipos del participante
+        //equipos del participante
         $equiposIds = collect();
         if ($participante) {
             $equiposIds = DB::table('participante_equipo')
@@ -30,7 +29,6 @@ class EventoController extends Controller
                 ->pluck('Id_equipo');
         }
         
-        // Verificar inscripciones
         foreach ($eventos as $evento) {
             $evento->inscrito = false;
             if ($equiposIds->isNotEmpty()) {
@@ -43,7 +41,6 @@ class EventoController extends Controller
         return view('eventos.index', compact('eventos'));
     }
 
-    // Ver detalles del evento
     public function show($id)
     {
         $evento = Evento::with(['proyectos.equipo'])->findOrFail($id);
@@ -51,7 +48,6 @@ class EventoController extends Controller
         $user = Auth::user();
         $participante = Participante::where('Usuario_id', $user->Id)->first();
         
-        // Obtener equipos del participante
         $equipos = collect();
         $inscrito = false;
         
@@ -62,7 +58,6 @@ class EventoController extends Controller
                       ->where('Id_participante', $participante->Id);
             })->get();
             
-            // Verificar si está inscrito
             $equiposIds = $equipos->pluck('Id');
             $inscrito = Proyecto::where('Id_evento', $id)
                 ->whereIn('Id_equipo', $equiposIds)
@@ -72,12 +67,12 @@ class EventoController extends Controller
         return view('eventos.show', compact('evento', 'equipos', 'inscrito'));
     }
 
-    // Mostrar formulario de inscripción
+    //inscripcion al ev
     public function inscripcion($id)
     {
         $evento = Evento::findOrFail($id);
         
-        // Verificar que el evento esté activo o próximo
+        //si el evento esta activo 
         if ($evento->estado === 'finalizado') {
             return redirect()->route('eventos.index')
                 ->with('error', 'No puedes inscribirte a un evento finalizado');
@@ -91,7 +86,7 @@ class EventoController extends Controller
                 ->with('error', 'Debes ser un participante para inscribirte');
         }
         
-        // Obtener equipos del participante
+        //seleccionar equipo
         $equipos = Equipo::whereIn('Id', function($query) use ($participante) {
             $query->select('Id_equipo')
                   ->from('participante_equipo')
@@ -106,7 +101,6 @@ class EventoController extends Controller
         return view('eventos.inscripcion', compact('evento', 'equipos'));
     }
 
-    // Procesar inscripción
     public function inscribirse(Request $request, $id)
     {
         $request->validate([
@@ -123,7 +117,6 @@ class EventoController extends Controller
 
             $evento = Evento::findOrFail($id);
             
-            // Verificar que el evento esté activo o próximo
             if ($evento->estado === 'finalizado') {
                 return redirect()->route('eventos.index')
                     ->with('error', 'No puedes inscribirte a un evento finalizado');
@@ -132,7 +125,6 @@ class EventoController extends Controller
             $user = Auth::user();
             $participante = Participante::where('Usuario_id', $user->Id)->first();
             
-            // Verificar que el usuario pertenezca al equipo
             $perteneceAlEquipo = DB::table('participante_equipo')
                 ->where('Id_participante', $participante->Id)
                 ->where('Id_equipo', $request->equipo_id)
@@ -143,7 +135,6 @@ class EventoController extends Controller
                     ->with('error', 'No perteneces a este equipo');
             }
             
-            // Verificar que el equipo no esté ya inscrito
             $yaInscrito = Proyecto::where('Id_evento', $id)
                 ->where('Id_equipo', $request->equipo_id)
                 ->exists();
@@ -153,7 +144,7 @@ class EventoController extends Controller
                     ->with('error', 'Este equipo ya está inscrito en el evento');
             }
             
-            // Crear o buscar asesor
+            //asesor
             $asesor = Asesor::firstOrCreate(
                 ['Correo' => $request->asesor_correo],
                 [
@@ -162,7 +153,7 @@ class EventoController extends Controller
                 ]
             );
             
-            // Crear proyecto
+            //proyecto para la inscripcion
             $proyecto = new Proyecto();
             $proyecto->nombre = $request->nombre_proyecto;
             $proyecto->Id_equipo = $request->equipo_id;
@@ -179,7 +170,6 @@ class EventoController extends Controller
                 'equipo_id' => $request->equipo_id
             ]);
 
-            // Redirigir al índice de eventos
             return redirect()->route('eventos.index')
                 ->with('success', '¡Te has inscrito exitosamente al evento "' . $evento->Nombre . '"!');
 

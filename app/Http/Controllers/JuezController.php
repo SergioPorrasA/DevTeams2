@@ -21,7 +21,7 @@ class JuezController extends Controller
             ->where('usuario_rol.Id_usuario', $user->Id)
             ->first();
         
-        // Solo permitir Administrador y Juez
+        //vistas para el juez
         if (!$userRole || !in_array($userRole->Descripcion, ['Administrador', 'Juez'])) {
             return redirect()->route('dashboard')
                 ->with('error', 'No tienes permisos para acceder a esta sección.');

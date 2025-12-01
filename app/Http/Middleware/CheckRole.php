@@ -17,14 +17,12 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string $roles): Response
     {
-        // Verificar si el usuario está autenticado
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
         $user = Auth::user();
         
-        // Obtener rol del usuario
         $userRole = DB::table('usuario_rol')
             ->join('rol', 'usuario_rol.Id_Rol', '=', 'rol.Id')
             ->where('usuario_rol.Id_usuario', $user->Id)
@@ -35,15 +33,13 @@ class CheckRole
             return redirect()->route('login')->with('error', 'No tienes un rol asignado.');
         }
 
-        // Separar roles permitidos
         $allowedRoles = array_map('trim', explode(',', $roles));
         
-        // Si el usuario tiene uno de los roles permitidos, CONTINUAR
         if (in_array($userRole->Descripcion, $allowedRoles)) {
             return $next($request);
         }
 
-        // Si NO tiene permiso, redirigir a su dashboard
+        //si es participante
         switch ($userRole->Descripcion) {
             case 'Administrador':
                 return redirect()->route('admin.equipos.index')

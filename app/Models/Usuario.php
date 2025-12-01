@@ -25,19 +25,19 @@ class Usuario extends Authenticatable
         'remember_token',
     ];
 
-    // Configurar el campo de email para Laravel
+    
     public function getEmailAttribute()
     {
         return $this->Correo;
     }
 
-    // Configurar el campo de contraseña para Laravel
+    
     public function getAuthPassword()
     {
         return $this->Contraseña;
     }
 
-    // Configurar el nombre del campo email
+    
     public function getAuthIdentifierName()
     {
         return 'Correo';

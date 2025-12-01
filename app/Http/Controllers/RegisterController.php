@@ -10,14 +10,13 @@ use App\Models\Participante;
 
 class RegisterController extends Controller
 {
-    public function showRegistrationForm()
+    public function showRegisterForm()
     {
         return view('auth.register');
     }
 
     public function register(Request $request)
     {
-        // Validar datos
         $validated = $request->validate([
             'username' => 'required|string|max:255|unique:usuario,Nombre',
             'password' => 'required|string|min:8|confirmed',
@@ -32,7 +31,6 @@ class RegisterController extends Controller
         DB::beginTransaction();
 
         try {
-            // Crear usuario
             $usuario = Usuario::create([
                 'Nombre' => $request->username,
                 'Correo' => $request->correo,
@@ -40,7 +38,6 @@ class RegisterController extends Controller
                 'Is_active' => true,
             ]);
 
-            // Crear participante
             Participante::create([
                 'Usuario_id' => $usuario->Id,
                 'No_Control' => $request->no_control,
@@ -50,15 +47,13 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono,
             ]);
 
-            // Asignar rol de participante (ID = 3)
             DB::table('usuario_rol')->insert([
                 'Id_usuario' => $usuario->Id,
-                'Id_Rol' => 3, // Rol participante
+                'Id_Rol' => 3, //todos los creados son participantes
             ]);
 
             DB::commit();
 
-            // Redirigir al login con mensaje de éxito
             return redirect()->route('login')->with('success', '¡Registro exitoso! Ahora puedes iniciar sesión.');
 
         } catch (\Exception $e) {
