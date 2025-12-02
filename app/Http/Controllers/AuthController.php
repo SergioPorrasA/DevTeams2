@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use App\Models\Usuario;
+use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -22,38 +20,39 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $usuario = Usuario::where('Correo', $request->email)->first();
+        $credentials = [
+            'email' => $request->email,
+            'password' => $request->password,
+        ];
 
-        if ($usuario && Hash::check($request->password, $usuario->Contraseña) && $usuario->Is_active) {
-            Auth::login($usuario);
-            
-
+        if (Auth::attempt($credentials, $request->filled('remember'))) {
             $request->session()->regenerate();
             
-            $userRole = DB::table('usuario_rol')
-                ->join('rol', 'usuario_rol.Id_Rol', '=', 'rol.Id')
-                ->where('usuario_rol.Id_usuario', $usuario->Id)
-                ->first();
-
-            if ($userRole) {
-                switch ($userRole->Descripcion) {
-                    case 'Administrador':
-                        return redirect()->route('admin.equipos.index');
-                    case 'Juez':
-                        return redirect()->route('admin.jueces.index');
-                    case 'Participante':
-                        return redirect()->route('dashboard');
-                    default:
-                        return redirect()->route('dashboard');
-                }
+            $user = Auth::user();
+            
+            // Verificar si está activo
+            if (!$user->is_active) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Tu cuenta está inactiva. Contacta al administrador.',
+                ]);
             }
 
-            return redirect()->route('dashboard');
+            // Redirigir según el rol
+            if ($user->hasRole('Administrador')) {
+                return redirect()->route('admin.equipos.index');
+            } elseif ($user->hasRole('Juez')) {
+                return redirect()->route('admin.jueces.index');
+            } elseif ($user->hasRole('Participante')) {
+                return redirect()->route('dashboard');
+            }
+
+            return redirect()->intended('/dashboard');
         }
 
         return back()->withErrors([
-            'email' => 'Las credenciales no coinciden con nuestros registros o el usuario está inactivo.',
-        ])->withInput();
+            'email' => 'Las credenciales no coinciden con nuestros registros.',
+        ])->withInput($request->only('email'));
     }
 
     public function logout(Request $request)
@@ -62,6 +61,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect()->route('login');
+        return redirect()->route('login')->with('success', 'Sesión cerrada correctamente');
     }
 }

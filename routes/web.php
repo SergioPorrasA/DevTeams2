@@ -33,7 +33,7 @@ Route::middleware(['role:Participante'])->group(function () {
     Route::get('/eventos', [EventoController::class, 'index'])->name('eventos.index');
     Route::get('/eventos/{id}', [EventoController::class, 'show'])->name('eventos.show');
     Route::get('/eventos/{id}/inscripcion', [EventoController::class, 'inscripcion'])->name('eventos.inscripcion');
-    Route::post('/eventos/{id}/inscribirse', [EventoController::class, 'inscribirse'])->name('eventos.inscribirse');
+    Route::post('/eventos/{id}/inscribir', [EventoController::class, 'inscribirse'])->name('eventos.inscribirse');
     
     Route::get('/codigos', function () {
         return view('codigos.index');

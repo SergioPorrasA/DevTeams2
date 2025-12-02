@@ -13,10 +13,15 @@ return new class extends Migration
     {
         Schema::create('calificacion', function (Blueprint $table) {
             $table->id('Id');
+            $table->unsignedBigInteger('Proyecto_id'); // ✅ FK a proyecto
+            $table->unsignedBigInteger('Juez_id');
+            $table->unsignedBigInteger('Criterio_id');
             $table->integer('Calificacion');
-            $table->unsignedBigInteger('Id_criterio');
-
-            $table->foreign('Id_criterio')->references('Id')->on('criterio')->onDelete('cascade');
+            $table->timestamps();
+            
+            $table->foreign('Proyecto_id')->references('Id')->on('proyecto')->onDelete('cascade');
+            $table->foreign('Juez_id')->references('Id')->on('juez')->onDelete('cascade');
+            $table->foreign('Criterio_id')->references('Id')->on('criterio')->onDelete('cascade');
         });
     }
 

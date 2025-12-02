@@ -12,12 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('usuario_rol', function (Blueprint $table) {
-            $table->unsignedBigInteger('Id_usuario');
-            $table->unsignedBigInteger('Id_Rol');
-
-            $table->primary(['Id_usuario', 'Id_Rol']);
-            $table->foreign('Id_usuario')->references('Id')->on('usuario')->onDelete('cascade');
+            $table->id('Id');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->unsignedBigInteger('Id_Rol'); // Primero crear la columna
+            $table->timestamps();
+            
+            // Después agregar la foreign key
             $table->foreign('Id_Rol')->references('Id')->on('rol')->onDelete('cascade');
+            
+            $table->unique(['user_id', 'Id_Rol']);
         });
     }
 

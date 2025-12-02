@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('repositorio', function (Blueprint $table) {
+        Schema::create('especialidad', function (Blueprint $table) {
             $table->id('Id');
-            $table->string('Url', 500);
+            $table->string('Nombre');
+            $table->string('Descripcion')->nullable();
+            $table->timestamps();
         });
     }
-  
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('repositorio');
+        Schema::dropIfExists('especialidad');
     }
 };

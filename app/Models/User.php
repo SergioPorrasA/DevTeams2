@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_active',
     ];
 
     /**
@@ -43,6 +44,41 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
+    }
+
+    // Relación con roles usando TU estructura actual
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'usuario_rol', 'user_id', 'Id_Rol')
+                    ->withTimestamps();
+    }
+
+    // Método helper para verificar roles
+    public function hasRole($roleName)
+    {
+        return $this->roles()->where('Nombre', $roleName)->exists();
+    }
+
+    public function hasPermiso($permisoNombre)
+    {
+        foreach ($this->roles as $role) {
+            if ($role->hasPermiso($permisoNombre)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Relación con participante
+    public function participante()
+    {
+        return $this->hasOne(Participante::class, 'user_id');
+    }
+
+    public function juez()
+    {
+        return $this->hasOne(Juez::class, 'user_id');
     }
 }

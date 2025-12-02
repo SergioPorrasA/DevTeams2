@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use App\Models\Usuario;
+use App\Models\User;
 use App\Models\Participante;
+use App\Models\Role;
 
 class RegisterController extends Controller
 {
@@ -18,12 +19,12 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:usuario,Nombre',
+            'username' => 'required|string|max:255',
             'password' => 'required|string|min:8|confirmed',
             'nombre' => 'required|string|max:255',
             'no_control' => 'required|string|max:20|unique:participante,No_Control',
             'carrera_id' => 'required|integer|exists:carrera,Id',
-            'correo' => 'required|email|max:255|unique:participante,Correo',
+            'correo' => 'required|email|max:255|unique:users,email',
             'telefono' => 'required|string|max:15',
             'terms' => 'required|accepted',
         ]);
@@ -31,15 +32,17 @@ class RegisterController extends Controller
         DB::beginTransaction();
 
         try {
-            $usuario = Usuario::create([
-                'Nombre' => $request->username,
-                'Correo' => $request->correo,
-                'Contraseña' => Hash::make($request->password),
-                'Is_active' => true,
+            // 1. Crear usuario en tabla users
+            $user = User::create([
+                'name' => $request->username,
+                'email' => $request->correo,
+                'password' => $request->password, // Se hashea automáticamente
+                'is_active' => true,
             ]);
 
+            // 2. Crear participante
             Participante::create([
-                'Usuario_id' => $usuario->Id,
+                'user_id' => $user->id, // ✅ Usar user_id
                 'No_Control' => $request->no_control,
                 'Carrera_id' => $request->carrera_id,
                 'Nombre' => $request->nombre,
@@ -47,10 +50,16 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono,
             ]);
 
-            DB::table('usuario_rol')->insert([
-                'Id_usuario' => $usuario->Id,
-                'Id_Rol' => 3, //todos los creados son participantes
-            ]);
+            // 3. Asignar rol de Participante
+            $roleParticipante = Role::where('Nombre', 'Participante')->first();
+            if ($roleParticipante) {
+                DB::table('usuario_rol')->insert([
+                    'user_id' => $user->id, // ✅ Usar user_id
+                    'Id_Rol' => $roleParticipante->Id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             DB::commit();
 

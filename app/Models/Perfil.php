@@ -19,4 +19,11 @@ class Perfil extends Model
     {
         return $this->hasMany(Equipo::class, 'Id_perfil', 'Id');
     }
+
+    public function participantes()
+    {
+        return $this->belongsToMany(Participante::class, 'participante_equipo', 'Id_perfil', 'Participante_id')
+                    ->withPivot('Equipo_id')
+                    ->withTimestamps();
+    }
 }

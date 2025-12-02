@@ -2,21 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Evento extends Model
 {
+    use HasFactory;
+
     protected $table = 'evento';
     protected $primaryKey = 'Id';
-    public $timestamps = false;
 
     protected $fillable = [
         'Nombre',
         'Descripcion',
         'Fecha_inicio',
         'Fecha_fin',
-        'Id_juez'
+        'Ubicacion',
+        'Estado',
     ];
 
     protected $casts = [
@@ -24,70 +26,58 @@ class Evento extends Model
         'Fecha_fin' => 'datetime',
     ];
 
-    public function juez()
+    // Relación muchos a muchos con jueces
+    public function jueces()
     {
-        return $this->belongsTo(Juez::class, 'Id_juez', 'Id');
+        return $this->belongsToMany(Juez::class, 'evento_juez', 'Evento_id', 'Juez_id')
+                    ->withTimestamps();
     }
 
+    // Relación con proyectos
     public function proyectos()
     {
-        return $this->hasMany(Proyecto::class, 'Id_evento', 'Id');
+        return $this->hasMany(Proyecto::class, 'Evento_id', 'Id');
     }
 
-    // Obtener estado del evento
-    public function getEstadoAttribute()
+    // Obtener equipos inscritos a través de proyectos
+    public function equipos()
     {
-        $now = Carbon::now();
-        $inicio = Carbon::parse($this->Fecha_inicio);
-        $fin = Carbon::parse($this->Fecha_fin);
-
-        if ($now->lt($inicio)) {
-            return 'proximo';
-        } elseif ($now->between($inicio, $fin)) {
-            return 'activo';
-        } else {
-            return 'finalizado';
-        }
+        return $this->hasManyThrough(
+            Equipo::class,
+            Proyecto::class,
+            'Evento_id',
+            'Id',
+            'Id',
+            'Equipo_id'
+        );
     }
 
-    // Obtener etiqueta de estado con estilos
+    public function criterios()
+    {
+        return $this->hasMany(Criterio::class, 'Evento_id', 'Id');
+    }
+
+    // ✅ Agregar método estadoLabel
     public function getEstadoLabelAttribute()
     {
-        $estado = $this->estado;
-        
-        switch ($estado) {
-            case 'proximo':
-                return [
-                    'texto' => 'Próximo',
-                    'clase' => 'bg-blue-100 text-blue-700'
-                ];
-            case 'activo':
-                return [
-                    'texto' => 'En curso',
-                    'clase' => 'bg-green-100 text-green-700'
-                ];
-            case 'finalizado':
-                return [
-                    'texto' => 'Finalizado',
-                    'clase' => 'bg-gray-100 text-gray-600'
-                ];
-            default:
-                return [
-                    'texto' => 'Desconocido',
-                    'clase' => 'bg-gray-100 text-gray-600'
-                ];
-        }
-    }
+        $estados = [
+            'Activo' => [
+                'clase' => 'bg-green-100 text-green-800',
+                'texto' => 'Activo'
+            ],
+            'Finalizado' => [
+                'clase' => 'bg-gray-100 text-gray-800',
+                'texto' => 'Finalizado'
+            ],
+            'Cancelado' => [
+                'clase' => 'bg-red-100 text-red-800',
+                'texto' => 'Cancelado'
+            ],
+        ];
 
-    // Verificar si un equipo está inscrito
-    public function equipoInscrito($equipoId)
-    {
-        return $this->proyectos()->where('Id_equipo', $equipoId)->exists();
-    }
-
-    // Cantidad de equipos inscritos
-    public function getCantidadEquiposAttribute()
-    {
-        return $this->proyectos()->count();
+        return $estados[$this->Estado] ?? [
+            'clase' => 'bg-gray-100 text-gray-800',
+            'texto' => $this->Estado
+        ];
     }
 }

@@ -12,12 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('rol_permiso', function (Blueprint $table) {
-            $table->unsignedBigInteger('Id_rol');
-            $table->unsignedBigInteger('Id_permiso');
-
-            $table->primary(['Id_rol', 'Id_permiso']);
-            $table->foreign('Id_rol')->references('Id')->on('rol')->onDelete('cascade');
-            $table->foreign('Id_permiso')->references('Id')->on('permiso')->onDelete('cascade');
+            $table->id('Id');
+            $table->unsignedBigInteger('Id_Rol');
+            $table->unsignedBigInteger('Id_Permiso');
+            $table->timestamps();
+            
+            // Foreign keys
+            $table->foreign('Id_Rol')->references('Id')->on('rol')->onDelete('cascade');
+            $table->foreign('Id_Permiso')->references('Id')->on('permiso')->onDelete('cascade');
+            
+            $table->unique(['Id_Rol', 'Id_Permiso']);
         });
     }
 

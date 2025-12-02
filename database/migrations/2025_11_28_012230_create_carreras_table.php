@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('carrera', function (Blueprint $table) {
             $table->id('Id');
-            $table->string('Nombre', 255);
+            $table->string('Nombre');
+            $table->timestamps(); 
         });
     }
 

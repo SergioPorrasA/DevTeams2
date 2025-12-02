@@ -3,181 +3,170 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Evento;
-use App\Models\Equipo;
-use App\Models\Participante;
-use App\Models\Proyecto;
-use App\Models\Asesor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\Evento;
+use App\Models\Participante;
+use App\Models\Equipo;
+use App\Models\Proyecto;
+use App\Models\Asesor;
 
 class EventoController extends Controller
 {
     public function index()
     {
-        $eventos = Evento::orderBy('Fecha_inicio', 'desc')->get();
-        
         $user = Auth::user();
-        $participante = Participante::where('Usuario_id', $user->Id)->first();
+        $participante = Participante::where('user_id', $user->id)->first();
         
-        //equipos del participante
-        $equiposIds = collect();
+        $eventos = Evento::where('Estado', 'Activo')
+                        ->orderBy('Fecha_inicio', 'desc')
+                        ->get();
+        
+        // ✅ Verificar en qué eventos está inscrito el participante
+        $eventosInscritos = [];
         if ($participante) {
-            $equiposIds = DB::table('participante_equipo')
-                ->where('Id_participante', $participante->Id)
-                ->pluck('Id_equipo');
+            $eventosInscritos = DB::table('proyecto')
+                ->join('participante_equipo', 'proyecto.Equipo_id', '=', 'participante_equipo.Id_equipo')
+                ->where('participante_equipo.Id_participante', $participante->Id)
+                ->pluck('proyecto.Evento_id')
+                ->toArray();
         }
         
+        // Marcar eventos inscritos
         foreach ($eventos as $evento) {
-            $evento->inscrito = false;
-            if ($equiposIds->isNotEmpty()) {
-                $evento->inscrito = Proyecto::where('Id_evento', $evento->Id)
-                    ->whereIn('Id_equipo', $equiposIds)
-                    ->exists();
-            }
+            $evento->estaInscrito = in_array($evento->Id, $eventosInscritos);
         }
         
-        return view('eventos.index', compact('eventos'));
+        return view('eventos.index', compact('eventos', 'participante'));
     }
 
     public function show($id)
     {
-        $evento = Evento::with(['proyectos.equipo'])->findOrFail($id);
-        
+        $evento = Evento::with('jueces')->findOrFail($id);
         $user = Auth::user();
-        $participante = Participante::where('Usuario_id', $user->Id)->first();
         
-        $equipos = collect();
-        $inscrito = false;
+        $participante = Participante::where('user_id', $user->id)->first();
+        
+        $estaInscrito = false;
+        $proyectos = collect();
         
         if ($participante) {
-            $equipos = Equipo::whereIn('Id', function($query) use ($participante) {
-                $query->select('Id_equipo')
-                      ->from('participante_equipo')
-                      ->where('Id_participante', $participante->Id);
-            })->get();
+            $proyectos = DB::table('proyecto')
+                ->join('equipo', 'proyecto.Equipo_id', '=', 'equipo.Id')
+                ->join('participante_equipo', 'equipo.Id', '=', 'participante_equipo.Id_equipo')
+                ->where('proyecto.Evento_id', $evento->Id)
+                ->where('participante_equipo.Id_participante', $participante->Id)
+                ->select('proyecto.*', 'equipo.Nombre as nombre_equipo')
+                ->get();
             
-            $equiposIds = $equipos->pluck('Id');
-            $inscrito = Proyecto::where('Id_evento', $id)
-                ->whereIn('Id_equipo', $equiposIds)
-                ->exists();
+            $estaInscrito = $proyectos->isNotEmpty();
         }
         
-        return view('eventos.show', compact('evento', 'equipos', 'inscrito'));
+        return view('eventos.show', compact('evento', 'estaInscrito', 'proyectos', 'participante'));
     }
 
-    //inscripcion al ev
     public function inscripcion($id)
     {
         $evento = Evento::findOrFail($id);
-        
-        //si el evento esta activo 
-        if ($evento->estado === 'finalizado') {
-            return redirect()->route('eventos.index')
-                ->with('error', 'No puedes inscribirte a un evento finalizado');
-        }
-        
         $user = Auth::user();
-        $participante = Participante::where('Usuario_id', $user->Id)->first();
+        
+        $participante = Participante::where('user_id', $user->id)->first();
         
         if (!$participante) {
-            return redirect()->route('eventos.index')
-                ->with('error', 'Debes ser un participante para inscribirte');
+            return redirect()->back()
+                ->with('error', 'No se encontró tu perfil de participante. Contacta al administrador.');
         }
         
-        //seleccionar equipo
-        $equipos = Equipo::whereIn('Id', function($query) use ($participante) {
-            $query->select('Id_equipo')
-                  ->from('participante_equipo')
-                  ->where('Id_participante', $participante->Id);
-        })->with('participantes')->get();
+        $equiposIds = DB::table('participante_equipo')
+            ->where('Id_participante', $participante->Id)
+            ->pluck('Id_equipo');
+        
+        $equipos = Equipo::whereIn('Id', $equiposIds)
+            ->withCount('participantes')
+            ->get();
         
         if ($equipos->isEmpty()) {
-            return redirect()->route('eventos.index')
-                ->with('error', 'Debes crear un equipo primero para inscribirte');
+            return redirect()->back()
+                ->with('error', 'Debes pertenecer a un equipo para inscribirte. Crea o únete a un equipo primero.');
         }
+
+        $asesores = Asesor::all();
         
-        return view('eventos.inscripcion', compact('evento', 'equipos'));
+        return view('eventos.inscripcion', compact('evento', 'equipos', 'asesores', 'participante'));
     }
+
 
     public function inscribirse(Request $request, $id)
     {
-        $request->validate([
+        // Validar datos del formulario
+        $validated = $request->validate([
             'equipo_id' => 'required|exists:equipo,Id',
+            'asesor_id' => 'required|exists:asesor,Id',
             'nombre_proyecto' => 'required|string|max:255',
-            'categoria' => 'nullable|string|max:255',
-            'asesor_nombre' => 'required|string|max:255',
-            'asesor_correo' => 'required|email|max:255',
-            'asesor_telefono' => 'nullable|string|max:20',
+            'categoria' => 'required|string|max:100',
+        ], [
+            'equipo_id.required' => 'Debes seleccionar un equipo',
+            'asesor_id.required' => 'Debes seleccionar un asesor',
+            'nombre_proyecto.required' => 'El nombre del proyecto es obligatorio',
+            'categoria.required' => 'Debes seleccionar una categoría',
         ]);
 
-        try {
-            DB::beginTransaction();
+        $user = Auth::user();
+        $participante = Participante::where('user_id', $user->id)->first();
 
-            $evento = Evento::findOrFail($id);
-            
-            if ($evento->estado === 'finalizado') {
-                return redirect()->route('eventos.index')
-                    ->with('error', 'No puedes inscribirte a un evento finalizado');
-            }
-            
-            $user = Auth::user();
-            $participante = Participante::where('Usuario_id', $user->Id)->first();
-            
-            $perteneceAlEquipo = DB::table('participante_equipo')
-                ->where('Id_participante', $participante->Id)
-                ->where('Id_equipo', $request->equipo_id)
+        if (!$participante) {
+            return redirect()->back()
+                ->with('error', 'Debes ser un participante para inscribirte.')
+                ->withInput();
+        }
+
+        // Verificar que el participante pertenece al equipo
+        $perteneceAlEquipo = DB::table('participante_equipo')
+            ->where('Id_participante', $participante->Id)
+            ->where('Id_equipo', $request->equipo_id)
+            ->exists();
+
+        if (!$perteneceAlEquipo) {
+            return redirect()->back()
+                ->with('error', 'No perteneces al equipo seleccionado.')
+                ->withInput();
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Verificar si el equipo ya está inscrito en este evento
+            $yaInscrito = Proyecto::where('Evento_id', $id)
+                ->where('Equipo_id', $request->equipo_id)
                 ->exists();
-            
-            if (!$perteneceAlEquipo) {
-                return redirect()->back()
-                    ->with('error', 'No perteneces a este equipo');
-            }
-            
-            $yaInscrito = Proyecto::where('Id_evento', $id)
-                ->where('Id_equipo', $request->equipo_id)
-                ->exists();
-            
+
             if ($yaInscrito) {
+                DB::rollBack();
                 return redirect()->back()
-                    ->with('error', 'Este equipo ya está inscrito en el evento');
+                    ->with('error', 'Este equipo ya está inscrito en el evento.')
+                    ->withInput();
             }
-            
-            //asesor
-            $asesor = Asesor::firstOrCreate(
-                ['Correo' => $request->asesor_correo],
-                [
-                    'Nombre' => $request->asesor_nombre,
-                    'Telefono' => $request->asesor_telefono
-                ]
-            );
-            
-            //proyecto para la inscripcion
-            $proyecto = new Proyecto();
-            $proyecto->nombre = $request->nombre_proyecto;
-            $proyecto->Id_equipo = $request->equipo_id;
-            $proyecto->Id_evento = $id;
-            $proyecto->Id_asesor = $asesor->Id;
-            $proyecto->Categoria = $request->categoria;
-            $proyecto->save();
+
+            // Crear el proyecto
+            $proyecto = Proyecto::create([
+                'Equipo_id' => $request->equipo_id,
+                'Evento_id' => $id,
+                'Asesor_id' => $request->asesor_id,
+                'Nombre' => $request->nombre_proyecto,
+                'Categoria' => $request->categoria,
+            ]);
 
             DB::commit();
 
-            Log::info('Inscripción exitosa', [
-                'proyecto_id' => $proyecto->Id,
-                'evento_id' => $id,
-                'equipo_id' => $request->equipo_id
-            ]);
-
+            // ✅ Redirigir a la vista de eventos con mensaje de éxito
             return redirect()->route('eventos.index')
-                ->with('success', '¡Te has inscrito exitosamente al evento "' . $evento->Nombre . '"!');
+                ->with('success', '¡Inscripción exitosa! Tu equipo "' . $proyecto->Nombre . '" ha sido inscrito al evento "' . Evento::find($id)->Nombre . '".');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al inscribirse al evento: ' . $e->getMessage());
+            
             return redirect()->back()
-                ->with('error', 'Error al inscribirse: ' . $e->getMessage())
+                ->with('error', 'Error al inscribir: ' . $e->getMessage())
                 ->withInput();
         }
     }

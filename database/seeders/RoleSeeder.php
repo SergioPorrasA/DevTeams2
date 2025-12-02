@@ -12,31 +12,25 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('roles')->insert([
+        DB::table('rol')->insert([
             [
-                'nombre' => 'Administrador',
-                'descripcion' => 'Acceso total al sistema',
+                'Nombre' => 'Administrador',
+                'Descripcion' => 'Administrador del sistema',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
             [
-                'nombre' => 'Participante',
-                'descripcion' => 'Usuario participante en eventos',
+                'Nombre' => 'Juez',
+                'Descripcion' => 'Juez de eventos',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
             [
-                'nombre' => 'Juez',
-                'descripcion' => 'Califica proyectos',
+                'Nombre' => 'Participante',
+                'Descripcion' => 'Participante de eventos',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
-            [
-                'nombre' => 'Asesor',
-                'descripcion' => 'Asesora equipos',
-                'created_at' => now(),
-                'updated_at' => now()
-            ]
         ]);
     }
 }

@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('juez', function (Blueprint $table) {
+        Schema::create('asesor', function (Blueprint $table) {
             $table->id('Id');
-            $table->unsignedBigInteger('Id_especialidad');
-            $table->string('Nombre', 255);
-            $table->string('Correo', 255);
-            $table->string('telefono', 15);
-
-            $table->foreign('Id_especialidad')->references('Id')->on('especialidad')->onDelete('cascade');
+            $table->string('Nombre');
+            $table->string('Correo')->unique();
+            $table->string('Telefono')->nullable();
+            $table->string('Especialidad')->nullable(); // ✅ Agregar esta columna
+            $table->timestamps();
         });
     }
 
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('juez');
+        Schema::dropIfExists('asesor');
     }
 };

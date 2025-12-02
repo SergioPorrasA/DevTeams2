@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('evento', function (Blueprint $table) {
             $table->id('Id');
-            $table->string('Nombre', 255);
-            $table->text('Descripcion');
-            $table->unsignedBigInteger('Id_juez')->nullable();
-            $table->date('Fecha_inicio');
-            $table->date('Fecha_fin');
-
-            $table->foreign('Id_juez')->references('Id')->on('juez')->onDelete('set null');
+            $table->string('Nombre');
+            $table->text('Descripcion')->nullable();
+            $table->dateTime('Fecha_inicio');
+            $table->dateTime('Fecha_fin');
+            $table->string('Ubicacion')->nullable();
+            $table->enum('Estado', ['Activo', 'Finalizado', 'Cancelado'])->default('Activo');
+            $table->timestamps();
+            
         });
     }
 

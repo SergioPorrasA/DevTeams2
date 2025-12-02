@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::create('avance', function (Blueprint $table) {
             $table->id('Id');
+            $table->unsignedBigInteger('Proyecto_id'); // ✅ FK a proyecto
             $table->text('Descripcion');
-            $table->date('fecha');
+            $table->integer('Porcentaje')->default(0);
+            $table->date('Fecha');
+            $table->timestamps();
+            
+            $table->foreign('Proyecto_id')->references('Id')->on('proyecto')->onDelete('cascade');
         });
     }
 

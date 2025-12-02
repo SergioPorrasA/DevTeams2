@@ -6,23 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('especialidad', function (Blueprint $table) {
+        // SOLO crear la tabla rol, sin otras tablas
+        Schema::create('rol', function (Blueprint $table) {
             $table->id('Id');
-            $table->string('Nombre', 255);
-            $table->text('Descripcion');
+            $table->string('Nombre')->unique();
+            $table->string('Descripcion')->nullable();
+            $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('especialidad');
+        Schema::dropIfExists('rol');
     }
 };

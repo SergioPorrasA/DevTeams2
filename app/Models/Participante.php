@@ -2,45 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Participante extends Model
 {
+    use HasFactory;
+
     protected $table = 'participante';
     protected $primaryKey = 'Id';
-    public $timestamps = false;
 
     protected $fillable = [
-        'Nombre',
-        'Usuario_id',  
-        'Carrera_id',  
+        'user_id',
         'No_Control',
+        'Carrera_id',
+        'Nombre',
         'Correo',
-        'telefono'
+        'telefono',
     ];
 
     public function usuario()
     {
-        return $this->belongsTo(Usuario::class, 'Usuario_id', 'Id');  
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function carrera()
     {
-        return $this->belongsTo(Carrera::class, 'Carrera_id', 'Id'); 
+        return $this->belongsTo(Carrera::class, 'Carrera_id', 'Id');
     }
 
+    // ✅ Actualizar withPivot para usar Id_perfil
     public function equipos()
     {
-        return $this->belongsToMany(
-            Equipo::class,
-            'participante_equipo',
-            'Id_participante',
-            'Id_equipo'
-        );
-    }
-
-    public function rol()
-    {
-        return $this->belongsTo(Role::class, 'Usuario_Rol', 'Id');
+        return $this->belongsToMany(Equipo::class, 'participante_equipo', 'Id_participante', 'Id_equipo')
+                    ->withPivot('Id_perfil') // ✅ Cambiado de Perfil_id a Id_perfil
+                    ->withTimestamps();
     }
 }

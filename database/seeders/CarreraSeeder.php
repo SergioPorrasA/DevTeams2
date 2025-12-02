@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Carrera;
 
 class CarreraSeeder extends Seeder
 {
@@ -12,27 +12,17 @@ class CarreraSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('carreras')->insert([
-            [
-                'nombre' => 'Ingeniería en Sistemas Computacionales',
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            [
-                'nombre' => 'Ingeniería en Informática',
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            [
-                'nombre' => 'Ingeniería en Software',
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            [
-                'nombre' => 'Ingeniería en Electrónica',
-                'created_at' => now(),
-                'updated_at' => now()
-            ]
-        ]);
+        $carreras = [
+            ['Nombre' => 'Ingeniería en Sistemas Computacionales'],
+            ['Nombre' => 'Ingeniería Industrial'],
+            ['Nombre' => 'Ingeniería Mecatrónica'],
+            ['Nombre' => 'Ingeniería Electrónica'],
+            ['Nombre' => 'Ingeniería en Gestión Empresarial'],
+            ['Nombre' => 'Ingeniería Civil'],
+        ];
+
+        foreach ($carreras as $carrera) {
+            Carrera::create($carrera);
+        }
     }
 }

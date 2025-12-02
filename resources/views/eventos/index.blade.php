@@ -81,82 +81,84 @@
 
         <!-- Grid de eventos -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            @forelse ($eventos as $evento)
-                <div class="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-md transition relative">
-                    <!-- Badge de inscrito -->
-                    @if ($evento->inscrito)
-                        <div class="absolute top-4 right-4">
-                            <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center gap-1">
-                                ✓ INSCRITO
+            @forelse($eventos as $evento)
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 relative">
+                    
+                    {{-- ✅ Badge de inscrito --}}
+                    @if($evento->estaInscrito)
+                        <div class="absolute top-4 right-4 z-10">
+                            <span class="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg flex items-center gap-2">
+                                <i class="fas fa-check-circle"></i>
+                                Inscrito
                             </span>
                         </div>
                     @endif
 
-                    <!-- Etiquetas -->
-                    <div class="flex gap-2 mb-4">
-                        <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                            📅 hackathon
-                        </span>
-                        @if ($evento->estado === 'proximo')
-                            <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                                🔜 Próximo
-                            </span>
-                        @elseif ($evento->estado === 'activo')
-                            <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                🔴 Activo
-                            </span>
+                    {{-- Header del evento --}}
+                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 p-6">
+                        <h3 class="text-2xl font-bold text-white mb-2">{{ $evento->Nombre }}</h3>
+                        <div class="flex items-center text-purple-100 text-sm">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            {{ $evento->Fecha_inicio->format('d/m/Y') }}
+                        </div>
+                    </div>
+
+                    {{-- Contenido --}}
+                    <div class="p-6">
+                        <p class="text-gray-600 mb-4 line-clamp-3">{{ $evento->Descripcion }}</p>
+
+                        <div class="space-y-2 mb-4 text-sm">
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-clock w-5 text-purple-600"></i>
+                                <span>Inicio: {{ $evento->Fecha_inicio->format('d/m/Y H:i') }}</span>
+                            </div>
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-clock w-5 text-purple-600"></i>
+                                <span>Fin: {{ $evento->Fecha_fin->format('d/m/Y H:i') }}</span>
+                            </div>
+                            @if($evento->Ubicacion)
+                                <div class="flex items-center text-gray-700">
+                                    <i class="fas fa-map-marker-alt w-5 text-purple-600"></i>
+                                    <span>{{ $evento->Ubicacion }}</span>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- ✅ Botones según estado de inscripción --}}
+                        @if($evento->estaInscrito)
+                            {{-- Ya está inscrito --}}
+                            <div class="space-y-2">
+                                <div class="bg-green-50 border-2 border-green-500 rounded-lg p-3 text-center">
+                                    <i class="fas fa-check-circle text-green-600 text-xl mb-1"></i>
+                                    <p class="text-green-800 font-semibold">Ya estás inscrito en este evento</p>
+                                </div>
+                                <a href="{{ route('eventos.show', $evento->Id) }}" 
+                                   class="block w-full bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-700 transition text-center shadow-md">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    Ver Detalles
+                                </a>
+                            </div>
                         @else
-                            <span class="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">
-                                ✓ Finalizado
-                            </span>
+                            {{-- No está inscrito --}}
+                            <div class="flex gap-2">
+                                <a href="{{ route('eventos.show', $evento->Id) }}" 
+                                   class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition text-center shadow-md">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    Ver Detalles
+                                </a>
+                                <a href="{{ route('eventos.inscripcion', $evento->Id) }}" 
+                                   class="flex-1 bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition text-center shadow-md">
+                                    <i class="fas fa-user-plus mr-2"></i>
+                                    Inscribirse
+                                </a>
+                            </div>
                         @endif
                     </div>
-
-                    <!-- Título y descripción -->
-                    <h3 class="text-xl font-bold text-gray-900 mb-2 pr-20">{{ $evento->Nombre }}</h3>
-                    <p class="text-gray-600 text-sm mb-4">{{ Str::limit($evento->Descripcion, 100) }}</p>
-
-                    <!-- Fechas -->
-                    <div class="space-y-2 mb-4 text-sm text-gray-600">
-                        <div class="flex items-center gap-2">
-                            <span>📅</span>
-                            <span>Inicio: {{ \Carbon\Carbon::parse($evento->Fecha_inicio)->format('d/m/Y') }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span>⏰</span>
-                            <span>Fin: {{ \Carbon\Carbon::parse($evento->Fecha_fin)->format('d/m/Y') }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Participantes -->
-                    <div class="flex items-center gap-2 mb-4 text-sm text-gray-600">
-                        <span>👥</span>
-                        <span>{{ $evento->proyectos->count() }} equipos inscritos</span>
-                    </div>
-
-                    <!-- Botones de acción -->
-                    @if ($evento->inscrito)
-                        <a href="{{ route('eventos.show', $evento->Id) }}" 
-                           class="block w-full py-2.5 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition font-medium">
-                            Ver mi inscripción
-                        </a>
-                    @elseif ($evento->estado === 'finalizado')
-                        <a href="{{ route('eventos.show', $evento->Id) }}" 
-                           class="block w-full py-2.5 bg-gray-300 text-gray-600 text-center rounded-lg cursor-not-allowed">
-                            Ver detalles
-                        </a>
-                    @else
-                        <a href="{{ route('eventos.inscripcion', $evento->Id) }}" 
-                           class="block w-full py-2.5 bg-gray-900 text-white text-center rounded-lg hover:bg-gray-800 transition font-medium">
-                            Inscribirse
-                        </a>
-                    @endif
                 </div>
             @empty
-                <div class="col-span-full text-center py-12 bg-white rounded-2xl border border-gray-200">
-                    <div class="text-6xl mb-4">📅</div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">No hay eventos disponibles</h3>
-                    <p class="text-gray-600">Pronto habrá nuevos eventos disponibles</p>
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-calendar-times text-6xl text-gray-400 mb-4"></i>
+                    <p class="text-xl text-gray-600">No hay eventos disponibles en este momento</p>
                 </div>
             @endforelse
         </div>

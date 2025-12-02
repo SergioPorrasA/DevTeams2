@@ -12,6 +12,23 @@ class PerfilSeeder extends Seeder
      */
     public function run(): void
     {
-
+        DB::table('perfil')->insert([
+            [
+                'Nombre' => 'Líder',
+                'Descripcion' => 'Líder del equipo',
+            ],
+            [
+                'Nombre' => 'Diseñador',
+                'Descripcion' => 'Diseñador UI/UX',
+            ],
+            [
+                'Nombre' => 'Programador Backend',
+                'Descripcion' => 'Desarrollador Backend',
+            ],
+            [
+                'Nombre' => 'Programador Frontend',
+                'Descripcion' => 'Desarrollador Frontend',
+            ],
+        ]);
     }
 }

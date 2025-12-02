@@ -145,6 +145,67 @@
                         Este evento ha finalizado
                     </div>
                 @endif
+
+                {{-- Botones de acción --}}
+                <div class="mt-8">
+                    @if($estaInscrito)
+                        {{-- ✅ Ya está inscrito --}}
+                        <div class="bg-green-50 border-2 border-green-500 rounded-xl p-6 text-center">
+                            <div class="flex items-center justify-center mb-4">
+                                <div class="bg-green-500 rounded-full p-4">
+                                    <i class="fas fa-check-circle text-white text-4xl"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-bold text-green-800 mb-2">¡Ya estás inscrito!</h3>
+                            <p class="text-green-700 mb-4">Tu equipo está participando en este evento</p>
+                            
+                            {{-- Mostrar proyectos inscritos --}}
+                            @if($proyectos && $proyectos->count() > 0)
+                                <div class="bg-white rounded-lg p-4 mt-4">
+                                    <h4 class="font-semibold text-gray-800 mb-2">Tus proyectos:</h4>
+                                    @foreach($proyectos as $proyecto)
+                                        <div class="flex items-center justify-between bg-gray-50 p-3 rounded mb-2">
+                                            <div class="text-left">
+                                                <p class="font-medium text-gray-900">{{ $proyecto->Nombre }}</p>
+                                                <p class="text-sm text-gray-600">Equipo: {{ $proyecto->nombre_equipo }}</p>
+                                            </div>
+                                            <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">
+                                                Activo
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                            
+                            <div class="flex gap-4 mt-6">
+                                <a href="{{ route('eventos.index') }}" 
+                                   class="flex-1 bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition">
+                                    <i class="fas fa-arrow-left mr-2"></i>
+                                    Volver a eventos
+                                </a>
+                                <a href="{{ route('dashboard') }}" 
+                                   class="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition">
+                                    <i class="fas fa-tachometer-alt mr-2"></i>
+                                    Ir al inicio
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        {{-- ✅ No está inscrito - mostrar botón --}}
+                        <div class="flex gap-4">
+                            <a href="{{ route('eventos.index') }}" 
+                               class="flex-1 bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition text-center">
+                                <i class="fas fa-arrow-left mr-2"></i>
+                                Volver
+                            </a>
+                            <a href="{{ route('eventos.inscripcion', $evento->Id) }}" 
+                               class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition text-center shadow-lg">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                Inscribirse al Evento
+                            </a>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

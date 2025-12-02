@@ -11,19 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('participante', function (Blueprint $table) {
+        Schema::create('juez', function (Blueprint $table) {
             $table->id('Id');
             $table->unsignedBigInteger('user_id');
-            $table->string('No_Control')->unique();
-            $table->unsignedBigInteger('Carrera_id');
-            $table->string('Nombre');
-            $table->string('Correo')->unique();
-            $table->string('telefono', 20)->nullable();
+            $table->unsignedBigInteger('Id_especialidad')->nullable();
+            $table->string('Nombre', 255);
+            $table->string('Correo', 255)->unique();
+            $table->string('telefono', 15);
             $table->timestamps();
-            
+
             // Foreign keys
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('Carrera_id')->references('Id')->on('carrera')->onDelete('cascade');
+            $table->foreign('Id_especialidad')->references('Id')->on('especialidad')->onDelete('cascade');
         });
     }
 
@@ -32,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('participante');
+        Schema::dropIfExists('juez');
     }
 };

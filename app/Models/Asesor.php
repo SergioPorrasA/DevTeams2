@@ -2,22 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Asesor extends Model
 {
+    use HasFactory;
+
     protected $table = 'asesor';
     protected $primaryKey = 'Id';
-    public $timestamps = false;
 
     protected $fillable = [
         'Nombre',
         'Correo',
-        'Telefono'
+        'Telefono',
+        'Especialidad', 
     ];
 
     public function proyectos()
     {
-        return $this->hasMany(Proyecto::class, 'Id_asesor', 'Id');
+        return $this->hasMany(Proyecto::class, 'Asesor_id', 'Id');
     }
 }

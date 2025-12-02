@@ -3,205 +3,207 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Equipo;
 use App\Models\Participante;
 use App\Models\Perfil;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class EquipoController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
-        
-        //equipos del usuario
-        $participante = Participante::where('Usuario_id', $user->Id)->first();
-        
+        $participante = Participante::where('user_id', $user->id)->first();
+
         if (!$participante) {
-            return view('dashboard', ['equipos' => collect()]);
+            return view('equipos.index', ['equipos' => collect()]);
         }
-        
-        
+
+        // ✅ Obtener equipos del participante con sus miembros
         $equipos = Equipo::whereIn('Id', function($query) use ($participante) {
             $query->select('Id_equipo')
                   ->from('participante_equipo')
                   ->where('Id_participante', $participante->Id);
-        })->with(['participantes.usuario'])->get();
-        
-        Log::info('Equipos cargados para participante', [
-            'participante_id' => $participante->Id,
-            'cantidad_equipos' => $equipos->count()
-        ]);
-        
+        })
+        ->with(['participantes.usuario']) // ✅ Usar 'usuario' no 'user'
+        ->get();
+
         return view('dashboard', compact('equipos'));
+    }
+
+    public function create()
+    {
+        return view('equipos.create');
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:equipo,Nombre',
         ]);
 
+        $user = Auth::user();
+        $participante = Participante::where('user_id', $user->id)->first();
+
+        if (!$participante) {
+            return back()->with('error', 'Debes ser un participante para crear un equipo.');
+        }
+
+        DB::beginTransaction();
+
         try {
-            DB::beginTransaction();
+            // Crear el equipo
+            $equipo = Equipo::create([
+                'Nombre' => $request->nombre,
+            ]);
 
-            $user = Auth::user();
-            
-            $participante = Participante::firstOrCreate(
-                ['Usuario_id' => $user->Id],
-                [
-                    'Nombre' => $user->Nombre,
-                    'Correo' => $user->Correo,
-                    'No_Control' => null,
-                    'Carrera_id' => null,
-                    'telefono' => null
-                ]
-            );
+            // Obtener el perfil de "Líder"
+            $perfilLider = Perfil::where('Nombre', 'Líder')->first();
 
-            $equipo = new Equipo();
-            $equipo->nombre = $request->nombre;
-            $equipo->save();
+            if (!$perfilLider) {
+                DB::rollBack();
+                return back()->with('error', 'No se encontró el perfil de Líder en el sistema.');
+            }
 
-            //el participante sera lider del equipo que cree
+            // Asignar al creador como líder
             DB::table('participante_equipo')->insert([
                 'Id_participante' => $participante->Id,
                 'Id_equipo' => $equipo->Id,
-                'Id_perfil' => 1  
+                'Id_perfil' => $perfilLider->Id,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             DB::commit();
 
-            Log::info('Equipo creado exitosamente', [
-                'equipo_id' => $equipo->Id,
-                'equipo_nombre' => $equipo->nombre,
-                'participante_id' => $participante->Id
-            ]);
+            return redirect()->route('equipos.show', $equipo->Id)
+                ->with('success', '¡Equipo creado exitosamente! Eres el líder del equipo.');
 
-            return redirect()->route('dashboard')->with('success', '¡Equipo "' . $equipo->nombre . '" creado exitosamente!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error al crear equipo: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->route('dashboard')->with('error', 'Error al crear el equipo: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error al crear el equipo: ' . $e->getMessage()]);
         }
     }
 
     public function show($id)
     {
-        $equipo = Equipo::with(['participantes.usuario', 'proyectos'])->findOrFail($id);
+        // ✅ Cargar equipo con participantes y sus usuarios
+        $equipo = Equipo::with(['participantes.usuario', 'participantes.carrera'])->findOrFail($id);
         
         $user = Auth::user();
-        $participante = Participante::where('Usuario_id', $user->Id)->first();
-        
-        if (!$participante) {
-            return redirect()->route('dashboard')->with('error', 'No tienes acceso a este equipo');
-        }
-        
-        $perteneceAlEquipo = DB::table('participante_equipo')
-            ->where('Id_participante', $participante->Id)
-            ->where('Id_equipo', $id)
-            ->exists();
-        
-        if (!$perteneceAlEquipo) {
-            return redirect()->route('dashboard')->with('error', 'No tienes acceso a este equipo');
-        }
-        
-        return view('equipos.show', compact('equipo'));
-    }
+        $participante = Participante::where('user_id', $user->id)->first();
 
-    public function leave($id)
-    {
-        try {
-            $user = Auth::user();
-            $participante = Participante::where('Usuario_id', $user->Id)->first();
-            
-            if (!$participante) {
-                return redirect()->route('dashboard')->with('error', 'No se encontró el participante');
-            }
+        // Verificar si el usuario actual es miembro del equipo
+        $esMiembro = false;
+        $esLider = false;
 
-            
-            $cantidadMiembros = DB::table('participante_equipo')
-                ->where('Id_equipo', $id)
-                ->count();
-
-            
-            DB::table('participante_equipo')
+        if ($participante) {
+            $miembro = DB::table('participante_equipo')
+                ->where('Id_equipo', $equipo->Id)
                 ->where('Id_participante', $participante->Id)
-                ->where('Id_equipo', $id)
-                ->delete();
+                ->first();
 
-            if ($cantidadMiembros <= 1) {
-                $equipo = Equipo::find($id);
-                if ($equipo) {
-                    $equipo->delete();
+            if ($miembro) {
+                $esMiembro = true;
+                
+                // Verificar si es líder
+                $perfilLider = Perfil::where('Nombre', 'Líder')->first();
+                if ($perfilLider && $miembro->Id_perfil == $perfilLider->Id) {
+                    $esLider = true;
                 }
-                return redirect()->route('dashboard')->with('success', 'Has salido del equipo y este ha sido eliminado');
             }
-
-            return redirect()->route('dashboard')->with('success', 'Has salido del equipo exitosamente');
-        } catch (\Exception $e) {
-            Log::error('Error al salir del equipo: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Error al salir del equipo: ' . $e->getMessage());
         }
+
+        return view('equipos.show', compact('equipo', 'esMiembro', 'esLider'));
     }
 
-    //invitar al equipo
-    public function invite(Request $request, $id)
+    public function edit($id)
+    {
+        $equipo = Equipo::findOrFail($id);
+        $user = Auth::user();
+        $participante = Participante::where('user_id', $user->id)->first();
+
+        if (!$participante) {
+            return redirect()->route('equipos.index')
+                ->with('error', 'No tienes permisos para editar este equipo.');
+        }
+
+        // Verificar si es líder
+        $perfilLider = Perfil::where('Nombre', 'Líder')->first();
+        $esLider = DB::table('participante_equipo')
+            ->where('Id_equipo', $equipo->Id)
+            ->where('Id_participante', $participante->Id)
+            ->where('Id_perfil', $perfilLider->Id)
+            ->exists();
+
+        if (!$esLider) {
+            return redirect()->route('equipos.show', $equipo->Id)
+                ->with('error', 'Solo el líder puede editar el equipo.');
+        }
+
+        return view('equipos.edit', compact('equipo'));
+    }
+
+    public function update(Request $request, $id)
     {
         $request->validate([
-            'email' => 'required|email',
-            'rol' => 'required|string',
+            'nombre' => 'required|string|max:255|unique:equipo,Nombre,' . $id . ',Id',
         ]);
 
-        try {
-            $usuarioInvitado = \App\Models\Usuario::where('Correo', $request->email)->first();
-            
-            if (!$usuarioInvitado) {
-                return redirect()->back()->with('error', 'No se encontró un usuario con ese correo');
-            }
+        $equipo = Equipo::findOrFail($id);
+        $user = Auth::user();
+        $participante = Participante::where('user_id', $user->id)->first();
 
-            $participanteInvitado = Participante::firstOrCreate(
-                ['Usuario_id' => $usuarioInvitado->Id],
-                [
-                    'Nombre' => $usuarioInvitado->Nombre,
-                    'Correo' => $usuarioInvitado->Correo,
-                    'No_Control' => null,
-                    'Carrera_id' => null,
-                    'telefono' => null
-                ]
-            );
-
-            $yaEsMiembro = DB::table('participante_equipo')
-                ->where('Id_participante', $participanteInvitado->Id)
-                ->where('Id_equipo', $id)
-                ->exists();
-
-            if ($yaEsMiembro) {
-                return redirect()->back()->with('error', 'Este usuario ya es miembro del equipo');
-            }
-
-            $rolesMap = [
-                'lider' => 1,
-                'disenador' => 4,
-                'backend' => 7,
-                'frontend' => 10
-            ];
-
-            $perfilId = $rolesMap[$request->rol] ?? 1; 
-
-            DB::table('participante_equipo')->insert([
-                'Id_participante' => $participanteInvitado->Id,
-                'Id_equipo' => $id,
-                'Id_perfil' => $perfilId
-            ]);
-
-            return redirect()->back()->with('success', 'Usuario invitado exitosamente al equipo');
-        } catch (\Exception $e) {
-            Log::error('Error al invitar usuario: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error al invitar al usuario: ' . $e->getMessage());
+        if (!$participante) {
+            return back()->with('error', 'No tienes permisos para actualizar este equipo.');
         }
+
+        // Verificar si es líder
+        $perfilLider = Perfil::where('Nombre', 'Líder')->first();
+        $esLider = DB::table('participante_equipo')
+            ->where('Id_equipo', $equipo->Id)
+            ->where('Id_participante', $participante->Id)
+            ->where('Id_perfil', $perfilLider->Id)
+            ->exists();
+
+        if (!$esLider) {
+            return back()->with('error', 'Solo el líder puede actualizar el equipo.');
+        }
+
+        $equipo->update([
+            'Nombre' => $request->nombre,
+        ]);
+
+        return redirect()->route('equipos.show', $equipo->Id)
+            ->with('success', 'Equipo actualizado exitosamente.');
+    }
+
+    public function destroy($id)
+    {
+        $equipo = Equipo::findOrFail($id);
+        $user = Auth::user();
+        $participante = Participante::where('user_id', $user->id)->first();
+
+        if (!$participante) {
+            return back()->with('error', 'No tienes permisos para eliminar este equipo.');
+        }
+
+        // Verificar si es líder
+        $perfilLider = Perfil::where('Nombre', 'Líder')->first();
+        $esLider = DB::table('participante_equipo')
+            ->where('Id_equipo', $equipo->Id)
+            ->where('Id_participante', $participante->Id)
+            ->where('Id_perfil', $perfilLider->Id)
+            ->exists();
+
+        if (!$esLider) {
+            return back()->with('error', 'Solo el líder puede eliminar el equipo.');
+        }
+
+        $equipo->delete();
+
+        return redirect()->route('equipos.index')
+            ->with('success', 'Equipo eliminado exitosamente.');
     }
 }

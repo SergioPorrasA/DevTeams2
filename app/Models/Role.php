@@ -2,25 +2,36 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends Model
 {
-    protected $table = 'roles';
-    
+    use HasFactory;
+
+    protected $table = 'rol';
+    protected $primaryKey = 'Id';
+
     protected $fillable = [
-        'nombre',
-        'descripcion'
+        'Nombre',
+        'Descripcion',
     ];
 
-    public function usuarios(): BelongsToMany
+    public function users()
     {
-        return $this->belongsToMany(Usuario::class, 'usuario_rol');
+        return $this->belongsToMany(User::class, 'usuario_rol', 'Id_Rol', 'user_id')
+                    ->withTimestamps();
     }
 
-    public function permisos(): BelongsToMany
+    public function permisos()
     {
-        return $this->belongsToMany(Permiso::class, 'rol_permiso');
+        return $this->belongsToMany(Permiso::class, 'rol_permiso', 'Id_Rol', 'Id_Permiso')
+                    ->withTimestamps();
+    }
+
+    // Método helper para verificar si el rol tiene un permiso
+    public function hasPermiso($permisoNombre)
+    {
+        return $this->permisos()->where('Nombre', $permisoNombre)->exists();
     }
 }
